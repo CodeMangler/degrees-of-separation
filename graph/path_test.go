@@ -3,9 +3,9 @@ package graph
 import "testing"
 
 func TestPathStringRepresentation(t *testing.T) {
-	a := &Node{id: "A"}
-	b := &Node{id: "B"}
-	c := &Node{id: "C"}
+	a := &Node{ID: "A"}
+	b := &Node{ID: "B"}
+	c := &Node{ID: "C"}
 	pOne := Path{a, b, c}
 	pTwo := Path{a, c, b}
 	pThree := Path{b, a}
@@ -30,9 +30,9 @@ func TestPathStringRepresentation(t *testing.T) {
 }
 
 func TestPathEquality(t *testing.T) {
-	a := &Node{id: "A"}
-	b := &Node{id: "B"}
-	c := &Node{id: "C"}
+	a := &Node{ID: "A"}
+	b := &Node{ID: "B"}
+	c := &Node{ID: "C"}
 	pOne := Path{a, b, c}
 	pTwo := Path{a, b, c}
 	pThree := Path{a, b}
@@ -53,10 +53,10 @@ func TestPathEquality(t *testing.T) {
 }
 
 func TestPathContainsNode(t *testing.T) {
-	a := &Node{id: "A"}
-	b := &Node{id: "B"}
-	c := &Node{id: "C"}
-	d := &Node{id: "D"}
+	a := &Node{ID: "A"}
+	b := &Node{ID: "B"}
+	c := &Node{ID: "C"}
+	d := &Node{ID: "D"}
 	path := Path{a, b, c}
 	if !path.Contains(a) {
 		t.Errorf("%v should contain %v, but it didn't", path, a)

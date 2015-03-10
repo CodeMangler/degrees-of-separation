@@ -2,12 +2,14 @@ package graph
 
 import "sort"
 
+const maxDepth = 4
+
 // NodeFetcher is a function that can lazily load Node data.
 type NodeFetcher func(*Node)
 
 // Node represents a graph node.
 type Node struct {
-	id         string
+	ID         string
 	neighbours []*Node
 	loaded     bool
 	load       NodeFetcher
@@ -15,18 +17,18 @@ type Node struct {
 
 // NewNode constructs a new node with an ID and a lazy loader, and returns a pointer to the newly constructed Node.
 func NewNode(id string, loader NodeFetcher) *Node {
-	return &Node{id: id, load: loader}
+	return &Node{ID: id, load: loader}
 }
 
 // String returns a string representation of the Node.
 func (n *Node) String() string {
-	return n.id
+	return n.ID
 }
 
 // Equal defines equality of two Nodes.
 // Two graph nodes are equal if their IDs are equal, irrespective of the rest of their state.
 func (n *Node) Equal(other *Node) bool {
-	return n.id == other.id
+	return n.ID == other.ID
 }
 
 // Connect bidirectionally connects two graph Nodes.
@@ -48,12 +50,12 @@ func (n *Node) IsNeighbour(other *Node) bool {
 // PathsTo computes all possible paths from the current node to the target node.
 // It returns an empty slice when no paths are available.
 func (n *Node) PathsTo(target *Node) []Path {
-	paths := n.pathsTo(target, Path{}, []Path{})
+	paths := n.pathsTo(target, 0, Path{}, []Path{})
 	sort.Stable(byPathLength(paths))
 	return paths
 }
 
-func (n *Node) pathsTo(target *Node, currentPath Path, allPaths []Path) []Path {
+func (n *Node) pathsTo(target *Node, depth int, currentPath Path, allPaths []Path) []Path {
 	// Lazy load Node if required
 	if !n.loaded {
 		n.load(n)
@@ -78,7 +80,9 @@ func (n *Node) pathsTo(target *Node, currentPath Path, allPaths []Path) []Path {
 	}
 	// Search for paths from neighbours
 	for _, neighbour := range n.neighbours {
-		allPaths = append(allPaths, neighbour.pathsTo(target, currentPath, allPaths)...)
+		if depth < maxDepth {
+			allPaths = append(allPaths, neighbour.pathsTo(target, depth+1, currentPath, allPaths)...)
+		}
 	}
 	// HACK
 	return deDuplicatePaths(allPaths)
