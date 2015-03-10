@@ -5,20 +5,20 @@ import (
 )
 
 func TestGraphConstruction(t *testing.T) {
-	n := &Node{ID: "a"}
-	n.Connect(&Node{ID: "b", Neighbours: []*Node{&Node{ID: "c"}}})
-	if len(n.Neighbours) != 1 {
-		t.Errorf("Found %d neighbours on 'a'. Expected 'a' to have exactly one neighbour.", len(n.Neighbours))
+	n := &Node{id: "a", loaded: true}
+	n.Connect(&Node{id: "b", neighbours: []*Node{&Node{id: "c"}}, loaded: true})
+	if len(n.neighbours) != 1 {
+		t.Errorf("Found %d neighbours on 'a'. Expected 'a' to have exactly one neighbour.", len(n.neighbours))
 	}
 
-	if n.Neighbours[0].ID != "b" {
-		t.Errorf("Found %v to be first neighbour of 'a'. Expected it to be 'b'", n.Neighbours[0].ID)
+	if n.neighbours[0].id != "b" {
+		t.Errorf("Found %v to be first neighbour of 'a'. Expected it to be 'b'", n.neighbours[0].id)
 	}
 }
 
 func TestNodeStringRepresentation(t *testing.T) {
-	nodeOne := &Node{ID: "One"}
-	nodeTwo := &Node{ID: "Two", Neighbours: []*Node{nodeOne}}
+	nodeOne := &Node{id: "One", loaded: true}
+	nodeTwo := &Node{id: "Two", neighbours: []*Node{nodeOne}, loaded: true}
 	if nodeOne.String() != "One" {
 		t.Errorf("String representation of node incorrect. Got: %v, Expected: One", nodeOne.String())
 	}
@@ -28,11 +28,11 @@ func TestNodeStringRepresentation(t *testing.T) {
 }
 
 func TestNodeEquality(t *testing.T) {
-	nodeOne := &Node{ID: "A"}
-	nodeTwo := &Node{ID: "A"}
+	nodeOne := &Node{id: "A", loaded: true}
+	nodeTwo := &Node{id: "A", loaded: true}
 	nodeThree := nodeTwo
-	nodeFour := &Node{ID: "A", Neighbours: []*Node{&Node{ID: "C"}}}
-	nodeFive := &Node{ID: "B"}
+	nodeFour := &Node{id: "A", neighbours: []*Node{&Node{id: "C"}}, loaded: true}
+	nodeFive := &Node{id: "B", loaded: true}
 
 	if !nodeOne.Equal(nodeTwo) {
 		t.Errorf("%v was not equal to %v. Expected them to be equal.", nodeOne, nodeTwo)
@@ -49,13 +49,13 @@ func TestNodeEquality(t *testing.T) {
 }
 
 func TestNodeNeighbours(t *testing.T) {
-	a := &Node{ID: "A"}
-	b := &Node{ID: "B"}
-	c := &Node{ID: "C"}
-	d := &Node{ID: "D"}
-	e := &Node{ID: "E"}
-	f := &Node{ID: "F"}
-	g := &Node{ID: "G"}
+	a := &Node{id: "A", loaded: true}
+	b := &Node{id: "B", loaded: true}
+	c := &Node{id: "C", loaded: true}
+	d := &Node{id: "D", loaded: true}
+	e := &Node{id: "E", loaded: true}
+	f := &Node{id: "F", loaded: true}
+	g := &Node{id: "G", loaded: true}
 
 	a.Connect(b)
 	a.Connect(c)
@@ -96,10 +96,10 @@ A                |
                  J
 */
 func TestSimplePathComputation(t *testing.T) {
-	a := &Node{ID: "A"}
-	h := &Node{ID: "H"}
-	i := &Node{ID: "I"}
-	j := &Node{ID: "J"}
+	a := &Node{id: "A", loaded: true}
+	h := &Node{id: "H", loaded: true}
+	i := &Node{id: "I", loaded: true}
+	j := &Node{id: "J", loaded: true}
 
 	h.Connect(i)
 	i.Connect(j)
@@ -144,13 +144,13 @@ A--C----E        |
   B---D
 */
 func TestMultiplePathComputation(t *testing.T) {
-	a := &Node{ID: "A"}
-	b := &Node{ID: "B"}
-	c := &Node{ID: "C"}
-	d := &Node{ID: "D"}
-	e := &Node{ID: "E"}
-	f := &Node{ID: "F"}
-	g := &Node{ID: "G"}
+	a := &Node{id: "A", loaded: true}
+	b := &Node{id: "B", loaded: true}
+	c := &Node{id: "C", loaded: true}
+	d := &Node{id: "D", loaded: true}
+	e := &Node{id: "E", loaded: true}
+	f := &Node{id: "F", loaded: true}
+	g := &Node{id: "G", loaded: true}
 
 	a.Connect(b)
 	a.Connect(c)
@@ -187,5 +187,30 @@ func TestMultiplePathComputation(t *testing.T) {
 	}
 	if !aToF[6].Equal(Path{a, c, b, d, e, f}) {
 		t.Errorf("Seventh path from A to F was: %v. Expected seventh path to be A -> C -> B -> D -> E -> F", aToF[6])
+	}
+}
+
+func TestNodeLazyLoading(t *testing.T) {
+	a := &Node{id: "A", loaded: false}
+	b := &Node{id: "B", loaded: true}
+	c := &Node{id: "C", loaded: true}
+
+	loaderWasCalled := false
+	a.load = func(n *Node) {
+		loaderWasCalled = true
+		n.Connect(b)
+		b.Connect(c)
+	}
+
+	aToC := a.PathsTo(c)
+
+	if !loaderWasCalled {
+		t.Fatalf("Loader should've been called on A")
+	}
+	if len(aToC) != 1 {
+		t.Fatalf("Paths were not calculated from data loaded by the loader. Got %v paths. Expected 1", len(aToC))
+	}
+	if !aToC[0].Equal(Path{a, b, c}) {
+		t.Errorf("Path from A to C was incorrectly calculated. Got: %v. Expected A -> B -> C", aToC)
 	}
 }

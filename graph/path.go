@@ -4,13 +4,13 @@ package graph
 type Path []*Node
 
 // String returns a string representation of the path
-func (path Path) String() string {
-	pathLength := len(path)
+func (p Path) String() string {
+	pathLength := len(p)
 	if pathLength == 0 {
 		return "<EMPTY PATH>"
 	}
 	result := ""
-	for i, node := range path {
+	for i, node := range p {
 		result += node.String()
 		if i < pathLength-1 {
 			result += " -> "
@@ -21,12 +21,12 @@ func (path Path) String() string {
 
 // Equal defines equality of two Paths.
 // Two paths are equal if they have the same number of nodes, specified in the same order.
-func (path Path) Equal(other Path) bool {
-	if len(path) != len(other) {
+func (p Path) Equal(other Path) bool {
+	if len(p) != len(other) {
 		return false
 	}
 	for i, otherNode := range other {
-		if !path[i].Equal(otherNode) {
+		if !p[i].Equal(otherNode) {
 			return false
 		}
 	}
@@ -34,8 +34,8 @@ func (path Path) Equal(other Path) bool {
 }
 
 // Contains returns true if the current path contains the given Node, false otherwise.
-func (path Path) Contains(node *Node) bool {
-	for _, pathNode := range path {
+func (p Path) Contains(node *Node) bool {
+	for _, pathNode := range p {
 		if pathNode.Equal(node) {
 			return true
 		}
