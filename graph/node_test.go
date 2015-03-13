@@ -24,6 +24,19 @@ func TestNodeConstruction(t *testing.T) {
 	//	assert.NotNil(t, node.paths)
 }
 
+func TestNewNodeReturnsExistingNodesMatchingIDFromTheNodeGroup(t *testing.T) {
+	nodeOne := NewNode("one")
+	nodeTwo := NewNode("two")
+	anotherNodeOne := NewNode("one")
+
+	if nodeOne != anotherNodeOne {
+		t.Errorf("The two nodes should reuse the same reference due to matching IDs. Instead, two new instances were created.")
+	}
+	if nodeOne == nodeTwo {
+		t.Errorf("Error in creating a new Node. Expected a new Node to be instantiated for new IDs.")
+	}
+}
+
 func TestGraphConstruction(t *testing.T) {
 	n := &Node{ID: "a"}
 	n.Connect(&Node{ID: "b", neighbours: []*Node{&Node{ID: "c"}}})
@@ -116,6 +129,7 @@ func TestSimplePathComputation(t *testing.T) {
 	   A      |
 	          J
 	*/
+	defaultNodeGroup = NewNodeGroup()
 	a := NewNode("A")
 	h := NewNode("H")
 	i := NewNode("I")
@@ -164,6 +178,7 @@ func TestMultiplePathComputation(t *testing.T) {
 	    \ |   /
 	     B---D
 	*/
+	defaultNodeGroup = NewNodeGroup()
 	a := NewNode("A")
 	b := NewNode("B")
 	c := NewNode("C")
@@ -200,6 +215,7 @@ func TestMultiplePathComputation(t *testing.T) {
 }
 
 func TestNodeLazyLoading(t *testing.T) {
+	defaultNodeGroup = NewNodeGroup()
 	a := NewNode("A")
 	b := NewNode("B")
 	c := NewNode("C")

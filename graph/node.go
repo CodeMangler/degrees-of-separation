@@ -7,13 +7,10 @@ import (
 
 const debug = false
 
-var maxDepth = 6
-
 // NodeFetcher is a function that can lazily load Node data.
 type NodeFetcher func(*Node)
 
 var defaultNodeFetcher NodeFetcher = func(n *Node) {}
-var defaultNodeGroup = NewNodeGroup()
 
 // Node represents a graph node.
 type Node struct {
@@ -26,6 +23,9 @@ type Node struct {
 }
 
 // NewNode constructs a new node with an ID and a lazy loader, and returns a pointer to the newly constructed Node.
+// Parameter 1: id - ID for the new Node.
+// Parameter 2: loader - NodeFetcher to lazy load the Node. Defaults to an empty NodeFetcher if not specified.
+// Parameter 3: group - NodeGroup that this Node should belong to. Defaults to a default NodeGroup if not specified.
 func NewNode(id string, otherArgs ...interface{}) *Node {
 	var loader NodeFetcher
 	var group *NodeGroup
@@ -43,7 +43,12 @@ func NewNode(id string, otherArgs ...interface{}) *Node {
 	if group == nil {
 		group = defaultNodeGroup
 	}
-	node := &Node{ID: id, load: loader /*paths: make(map[string][]Path)*/}
+
+	node, present := group.Get(id)
+	if present {
+		return node
+	}
+	node = &Node{ID: id, load: loader /*paths: make(map[string][]Path)*/}
 	group.Register(node)
 	return node
 }
@@ -112,7 +117,7 @@ func (n *Node) pathsTo(target *Node, depth int, currentPath Path, allPaths []Pat
 
 	// Search for paths from neighbours
 	for _, neighbour := range n.neighbours {
-		if depth < maxDepth {
+		if depth < n.group.maxRecursionDepth {
 			allPaths = append(allPaths, neighbour.pathsTo(target, depth+1, currentPath, allPaths)...)
 		}
 	}

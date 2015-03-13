@@ -21,3 +21,15 @@ func TestNodeRegistration(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Equal(t, len(group.nodes), 2)
 }
+
+func TestGetNode(t *testing.T) {
+	group := NewNodeGroup()
+	node := &Node{ID: "one"}
+	group.Register(node)
+
+	foundNode, present := group.Get("one")
+	assert.True(t, present)
+	if node != foundNode {
+		t.Errorf("Expected original and found nodes to be identical, but they weren't.")
+	}
+}
