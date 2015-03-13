@@ -22,7 +22,7 @@ type Node struct {
 	loaded     bool
 	load       NodeFetcher
 	group      *NodeGroup
-	paths      map[string][]Path
+	//	paths      map[string][]Path
 }
 
 // NewNode constructs a new node with an ID and a lazy loader, and returns a pointer to the newly constructed Node.
@@ -43,7 +43,7 @@ func NewNode(id string, otherArgs ...interface{}) *Node {
 	if group == nil {
 		group = defaultNodeGroup
 	}
-	node := &Node{ID: id, load: loader, paths: make(map[string][]Path)}
+	node := &Node{ID: id, load: loader /*paths: make(map[string][]Path)*/}
 	group.Register(node)
 	return node
 }
@@ -106,7 +106,7 @@ func (n *Node) pathsTo(target *Node, depth int, currentPath Path, allPaths []Pat
 
 	if n.Equal(target) {
 		allPaths = append(allPaths, currentPath)
-		n.paths[target.ID] = append(n.paths[target.ID], currentPath)
+		//		n.paths[target.ID] = append(n.paths[target.ID], currentPath)
 		return allPaths
 	}
 
@@ -117,7 +117,7 @@ func (n *Node) pathsTo(target *Node, depth int, currentPath Path, allPaths []Pat
 		}
 	}
 
-	n.paths[target.ID] = append(n.paths[target.ID], allPaths...)
+	//	n.paths[target.ID] = append(n.paths[target.ID], allPaths...)
 	// HACK
 	return deDuplicatePaths(allPaths)
 }
