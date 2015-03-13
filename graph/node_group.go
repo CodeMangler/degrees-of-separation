@@ -18,5 +18,6 @@ func (g *NodeGroup) Register(node *Node) error {
 		return errors.New("Another node has already been registered with the same ID")
 	}
 	g.nodes[node.ID] = node
+	node.group = g
 	return nil
 }

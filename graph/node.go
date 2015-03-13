@@ -7,7 +7,7 @@ import (
 
 const debug = false
 
-const maxDepth = 4
+var maxDepth = 6
 
 // NodeFetcher is a function that can lazily load Node data.
 type NodeFetcher func(*Node)
@@ -22,6 +22,7 @@ type Node struct {
 	loaded     bool
 	load       NodeFetcher
 	group      *NodeGroup
+	paths      map[string][]Path
 }
 
 // NewNode constructs a new node with an ID and a lazy loader, and returns a pointer to the newly constructed Node.
@@ -42,8 +43,9 @@ func NewNode(id string, otherArgs ...interface{}) *Node {
 	if group == nil {
 		group = defaultNodeGroup
 	}
-
-	return &Node{ID: id, load: loader, group: group}
+	node := &Node{ID: id, load: loader, paths: make(map[string][]Path)}
+	group.Register(node)
+	return node
 }
 
 // String returns a string representation of the Node.
@@ -102,24 +104,20 @@ func (n *Node) pathsTo(target *Node, depth int, currentPath Path, allPaths []Pat
 	}
 	currentPath = append(currentPath, n)
 
-	// Visiting the destination node, which shouldn't normally happen, unless when starting from the destination node itself
-	// Add destination node to path and return
 	if n.Equal(target) {
 		allPaths = append(allPaths, currentPath)
+		n.paths[target.ID] = append(n.paths[target.ID], currentPath)
 		return allPaths
 	}
-	if n.IsNeighbour(target) {
-		// Found destination node. Add to path and return.
-		currentPath = append(currentPath, target)
-		allPaths = append(allPaths, currentPath)
-		return allPaths
-	}
+
 	// Search for paths from neighbours
 	for _, neighbour := range n.neighbours {
 		if depth < maxDepth {
 			allPaths = append(allPaths, neighbour.pathsTo(target, depth+1, currentPath, allPaths)...)
 		}
 	}
+
+	n.paths[target.ID] = append(n.paths[target.ID], allPaths...)
 	// HACK
 	return deDuplicatePaths(allPaths)
 }

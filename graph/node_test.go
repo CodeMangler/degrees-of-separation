@@ -2,6 +2,7 @@ package graph
 
 import (
 	"github.com/stretchr/testify/assert"
+	"sort"
 	"testing"
 )
 
@@ -9,16 +10,19 @@ func TestNodeConstruction(t *testing.T) {
 	node := NewNode("one")
 	assert.Equal(t, node.load, defaultNodeFetcher)
 	assert.Equal(t, node.group, defaultNodeGroup)
+	assert.NotNil(t, node.paths)
 
 	var nodeFetcher NodeFetcher = func(n *Node) {}
 	node = NewNode("two", nodeFetcher)
 	assert.Equal(t, node.load, nodeFetcher)
 	assert.Equal(t, node.group, defaultNodeGroup)
+	assert.NotNil(t, node.paths)
 
 	nodeGroup := NewNodeGroup()
 	node = NewNode("two", nil, nodeGroup)
 	assert.Equal(t, node.load, defaultNodeFetcher)
 	assert.Equal(t, node.group, nodeGroup)
+	assert.NotNil(t, node.paths)
 }
 
 func TestGraphConstruction(t *testing.T) {
@@ -107,12 +111,12 @@ func TestNodeNeighbours(t *testing.T) {
 	}
 }
 
-/*
-             H---I
-A                |
-                 J
-*/
 func TestSimplePathComputation(t *testing.T) {
+	/*
+	      H---I
+	   A      |
+	          J
+	*/
 	a := NewNode("A")
 	h := NewNode("H")
 	i := NewNode("I")
@@ -151,16 +155,16 @@ func TestSimplePathComputation(t *testing.T) {
 	}
 }
 
-/*
-  G-----F
- / |    |
-/  |    |    H---I
-A--C----E        |
-\  |    /        J
- \ |   /
-  B---D
-*/
 func TestMultiplePathComputation(t *testing.T) {
+	/*
+	     G-----F
+	    / |    |
+	   /  |    |    H---I
+	   A--C----E        |
+	   \  |    /        J
+	    \ |   /
+	     B---D
+	*/
 	a := NewNode("A")
 	b := NewNode("B")
 	c := NewNode("C")
@@ -181,38 +185,28 @@ func TestMultiplePathComputation(t *testing.T) {
 	f.Connect(g)
 
 	aToF := a.PathsTo(f)
-	if len(aToF) != 7 {
-		t.Fatalf("Found %d path(s) from A to F. Expected exactly 7 paths from A to F.", len(aToF))
-	}
-	if !aToF[0].Equal(Path{a, g, f}) {
-		t.Errorf("First path from A to F was: %v. Expected first path to be A -> G -> F", aToF[0])
-	}
-	if !aToF[1].Equal(Path{a, c, g, f}) {
-		t.Errorf("Second path from A to F was: %v. Expected second path to be A -> C -> G-> F", aToF[1])
-	}
-	if !aToF[2].Equal(Path{a, c, e, f}) {
-		t.Errorf("Third path from A to F was: %v. Expected third path to be A -> C -> E -> F", aToF[2])
-	}
-	if !aToF[3].Equal(Path{a, b, d, e, f}) {
-		t.Errorf("Fourth path from A to F was: %v. Expected fourth path to be A -> B -> D -> E -> F", aToF[3])
-	}
-	if !aToF[4].Equal(Path{a, b, c, g, f}) {
-		t.Errorf("Fifth path from A to F was: %v. Expected fifth path to be A -> B -> C -> G -> F", aToF[4])
-	}
-	if !aToF[5].Equal(Path{a, b, c, e, f}) {
-		t.Errorf("Sixth path from A to F was: %v. Expected sixth path to be A -> B -> C -> E -> F", aToF[5])
-	}
-	if !aToF[6].Equal(Path{a, c, b, d, e, f}) {
-		t.Errorf("Seventh path from A to F was: %v. Expected seventh path to be A -> C -> B -> D -> E -> F", aToF[6])
+	assert.Equal(t, 10, len(aToF))
+	if len(aToF) == 10 {
+		assert.Equal(t, Path{a, g, f}.String(), aToF[0].String())
+		assert.Equal(t, Path{a, c, g, f}.String(), aToF[1].String())
+		assert.Equal(t, Path{a, c, e, f}.String(), aToF[2].String())
+		assert.Equal(t, Path{a, g, c, e, f}.String(), aToF[3].String())
+		assert.Equal(t, Path{a, b, d, e, f}.String(), aToF[4].String())
+		assert.Equal(t, Path{a, b, c, g, f}.String(), aToF[5].String())
+		assert.Equal(t, Path{a, b, c, e, f}.String(), aToF[6].String())
+		assert.Equal(t, Path{a, c, b, d, e, f}.String(), aToF[7].String())
+		assert.Equal(t, Path{a, g, c, b, d, e, f}.String(), aToF[8].String())
+		assert.Equal(t, Path{a, b, d, e, c, g, f}.String(), aToF[9].String())
 	}
 }
 
 func TestNodeLazyLoading(t *testing.T) {
-	a := &Node{ID: "A", loaded: false}
+	a := NewNode("A")
 	b := NewNode("B")
 	c := NewNode("C")
 
 	loaderWasCalled := false
+	a.loaded = false
 	a.load = func(n *Node) {
 		loaderWasCalled = true
 		n.Connect(b)
@@ -229,5 +223,34 @@ func TestNodeLazyLoading(t *testing.T) {
 	}
 	if !aToC[0].Equal(Path{a, b, c}) {
 		t.Errorf("Path from A to C was incorrectly calculated. Got: %v. Expected A -> B -> C", aToC)
+	}
+}
+
+func TestPathCaching(t *testing.T) {
+	/*
+		A--B----C
+		   \   /
+		    \ /
+		     D
+	*/
+	a := NewNode("A")
+	b := NewNode("B")
+	c := NewNode("C")
+	d := NewNode("D")
+
+	a.Connect(b)
+	b.Connect(c)
+	b.Connect(d)
+	c.Connect(d)
+
+	a.PathsTo(d)
+	assert.Equal(t, 1, len(a.paths))
+	var cachedPaths []Path = a.paths["D"]
+	sort.Stable(byPathLength(cachedPaths))
+
+	assert.Equal(t, 2, len(cachedPaths))
+	if len(cachedPaths) == 2 {
+		assert.Equal(t, Path{a, b, d}, cachedPaths[0])
+		assert.Equal(t, Path{a, b, c, d}, cachedPaths[1])
 	}
 }
