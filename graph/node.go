@@ -1,11 +1,19 @@
 package graph
 
-import "sort"
+import (
+	"fmt"
+	"sort"
+)
+
+const debug = false
 
 const maxDepth = 4
 
 // NodeFetcher is a function that can lazily load Node data.
 type NodeFetcher func(*Node)
+
+var defaultNodeFetcher NodeFetcher = func(n *Node) {}
+var defaultNodeGroup = NewNodeGroup()
 
 // Node represents a graph node.
 type Node struct {
@@ -13,11 +21,29 @@ type Node struct {
 	neighbours []*Node
 	loaded     bool
 	load       NodeFetcher
+	group      *NodeGroup
 }
 
 // NewNode constructs a new node with an ID and a lazy loader, and returns a pointer to the newly constructed Node.
-func NewNode(id string, loader NodeFetcher) *Node {
-	return &Node{ID: id, load: loader}
+func NewNode(id string, otherArgs ...interface{}) *Node {
+	var loader NodeFetcher
+	var group *NodeGroup
+
+	if len(otherArgs) > 0 && otherArgs[0] != nil {
+		loader = otherArgs[0].(NodeFetcher)
+	}
+	if len(otherArgs) > 1 {
+		group = otherArgs[1].(*NodeGroup)
+	}
+
+	if loader == nil {
+		loader = defaultNodeFetcher
+	}
+	if group == nil {
+		group = defaultNodeGroup
+	}
+
+	return &Node{ID: id, load: loader, group: group}
 }
 
 // String returns a string representation of the Node.
@@ -50,15 +76,25 @@ func (n *Node) IsNeighbour(other *Node) bool {
 // PathsTo computes all possible paths from the current node to the target node.
 // It returns an empty slice when no paths are available.
 func (n *Node) PathsTo(target *Node) []Path {
+	if debug {
+		fmt.Println()
+	}
 	paths := n.pathsTo(target, 0, Path{}, []Path{})
 	sort.Stable(byPathLength(paths))
 	return paths
 }
 
 func (n *Node) pathsTo(target *Node, depth int, currentPath Path, allPaths []Path) []Path {
+	if debug {
+		for i := 0; i <= depth; i++ {
+			fmt.Printf("\t")
+		}
+		fmt.Printf("pathsTo(%v, %v, %v, >>%v<<, ##%v##)\n", n, target, depth, currentPath, allPaths)
+	}
 	// Lazy load Node if required
 	if !n.loaded {
 		n.load(n)
+		n.loaded = true
 	}
 	// Skip if this node has already been visited in the current run
 	if currentPath.Contains(n) {

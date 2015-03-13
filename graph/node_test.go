@@ -1,12 +1,29 @@
 package graph
 
 import (
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
+func TestNodeConstruction(t *testing.T) {
+	node := NewNode("one")
+	assert.Equal(t, node.load, defaultNodeFetcher)
+	assert.Equal(t, node.group, defaultNodeGroup)
+
+	var nodeFetcher NodeFetcher = func(n *Node) {}
+	node = NewNode("two", nodeFetcher)
+	assert.Equal(t, node.load, nodeFetcher)
+	assert.Equal(t, node.group, defaultNodeGroup)
+
+	nodeGroup := NewNodeGroup()
+	node = NewNode("two", nil, nodeGroup)
+	assert.Equal(t, node.load, defaultNodeFetcher)
+	assert.Equal(t, node.group, nodeGroup)
+}
+
 func TestGraphConstruction(t *testing.T) {
-	n := &Node{ID: "a", loaded: true}
-	n.Connect(&Node{ID: "b", neighbours: []*Node{&Node{ID: "c"}}, loaded: true})
+	n := &Node{ID: "a"}
+	n.Connect(&Node{ID: "b", neighbours: []*Node{&Node{ID: "c"}}})
 	if len(n.neighbours) != 1 {
 		t.Errorf("Found %d neighbours on 'a'. Expected 'a' to have exactly one neighbour.", len(n.neighbours))
 	}
@@ -17,8 +34,8 @@ func TestGraphConstruction(t *testing.T) {
 }
 
 func TestNodeStringRepresentation(t *testing.T) {
-	nodeOne := &Node{ID: "One", loaded: true}
-	nodeTwo := &Node{ID: "Two", neighbours: []*Node{nodeOne}, loaded: true}
+	nodeOne := &Node{ID: "One"}
+	nodeTwo := &Node{ID: "Two", neighbours: []*Node{nodeOne}}
 	if nodeOne.String() != "One" {
 		t.Errorf("String representation of node incorrect. Got: %v, Expected: One", nodeOne.String())
 	}
@@ -28,11 +45,11 @@ func TestNodeStringRepresentation(t *testing.T) {
 }
 
 func TestNodeEquality(t *testing.T) {
-	nodeOne := &Node{ID: "A", loaded: true}
-	nodeTwo := &Node{ID: "A", loaded: true}
+	nodeOne := &Node{ID: "A"}
+	nodeTwo := &Node{ID: "A"}
 	nodeThree := nodeTwo
-	nodeFour := &Node{ID: "A", neighbours: []*Node{&Node{ID: "C"}}, loaded: true}
-	nodeFive := &Node{ID: "B", loaded: true}
+	nodeFour := &Node{ID: "A", neighbours: []*Node{&Node{ID: "C"}}}
+	nodeFive := &Node{ID: "B"}
 
 	if !nodeOne.Equal(nodeTwo) {
 		t.Errorf("%v was not equal to %v. Expected them to be equal.", nodeOne, nodeTwo)
@@ -49,13 +66,13 @@ func TestNodeEquality(t *testing.T) {
 }
 
 func TestNodeNeighbours(t *testing.T) {
-	a := &Node{ID: "A", loaded: true}
-	b := &Node{ID: "B", loaded: true}
-	c := &Node{ID: "C", loaded: true}
-	d := &Node{ID: "D", loaded: true}
-	e := &Node{ID: "E", loaded: true}
-	f := &Node{ID: "F", loaded: true}
-	g := &Node{ID: "G", loaded: true}
+	a := &Node{ID: "A"}
+	b := &Node{ID: "B"}
+	c := &Node{ID: "C"}
+	d := &Node{ID: "D"}
+	e := &Node{ID: "E"}
+	f := &Node{ID: "F"}
+	g := &Node{ID: "G"}
 
 	a.Connect(b)
 	a.Connect(c)
@@ -96,10 +113,10 @@ A                |
                  J
 */
 func TestSimplePathComputation(t *testing.T) {
-	a := &Node{ID: "A", loaded: true}
-	h := &Node{ID: "H", loaded: true}
-	i := &Node{ID: "I", loaded: true}
-	j := &Node{ID: "J", loaded: true}
+	a := NewNode("A")
+	h := NewNode("H")
+	i := NewNode("I")
+	j := NewNode("J")
 
 	h.Connect(i)
 	i.Connect(j)
@@ -144,13 +161,13 @@ A--C----E        |
   B---D
 */
 func TestMultiplePathComputation(t *testing.T) {
-	a := &Node{ID: "A", loaded: true}
-	b := &Node{ID: "B", loaded: true}
-	c := &Node{ID: "C", loaded: true}
-	d := &Node{ID: "D", loaded: true}
-	e := &Node{ID: "E", loaded: true}
-	f := &Node{ID: "F", loaded: true}
-	g := &Node{ID: "G", loaded: true}
+	a := NewNode("A")
+	b := NewNode("B")
+	c := NewNode("C")
+	d := NewNode("D")
+	e := NewNode("E")
+	f := NewNode("F")
+	g := NewNode("G")
 
 	a.Connect(b)
 	a.Connect(c)
@@ -192,8 +209,8 @@ func TestMultiplePathComputation(t *testing.T) {
 
 func TestNodeLazyLoading(t *testing.T) {
 	a := &Node{ID: "A", loaded: false}
-	b := &Node{ID: "B", loaded: true}
-	c := &Node{ID: "C", loaded: true}
+	b := NewNode("B")
+	c := NewNode("C")
 
 	loaderWasCalled := false
 	a.load = func(n *Node) {
