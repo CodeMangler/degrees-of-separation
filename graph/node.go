@@ -86,17 +86,27 @@ func (n *Node) PathsTo(target *Node) []Path {
 	if debug {
 		fmt.Println()
 	}
-	paths := n.pathsTo(target, 0, Path{}, []Path{})
+	chanResults := make(chan []Path)
+	go n.pathsTo(target, 0, Path{}, chanResults)
+	paths := <-chanResults
 	sort.Stable(byPathLength(paths))
 	return paths
 }
 
-func (n *Node) pathsTo(target *Node, depth int, currentPath Path, allPaths []Path) []Path {
+func (n *Node) pathsTo(target *Node, depth int, currentPath Path, chanResults chan []Path) {
+	if debug {
+		defer func() {
+			for i := 0; i <= depth; i++ {
+				fmt.Printf("\t")
+			}
+			fmt.Printf("Returning from pathsTo(%v, %v, %v, >>%v<<)\n", n, target, depth, currentPath)
+		}()
+	}
 	if debug {
 		for i := 0; i <= depth; i++ {
 			fmt.Printf("\t")
 		}
-		fmt.Printf("pathsTo(%v, %v, %v, >>%v<<, ##%v##)\n", n, target, depth, currentPath, allPaths)
+		fmt.Printf("pathsTo(%v, %v, %v, >>%v<<)\n", n, target, depth, currentPath)
 	}
 	// Lazy load Node if required
 	if !n.loaded {
@@ -105,25 +115,44 @@ func (n *Node) pathsTo(target *Node, depth int, currentPath Path, allPaths []Pat
 	}
 	// Skip if this node has already been visited in the current run
 	if currentPath.Contains(n) {
-		return []Path{}
+		chanResults <- []Path{}
 	}
 	currentPath = append(currentPath, n)
 
 	if n.Equal(target) {
+		chanResults <- []Path{currentPath}
 		//		n.paths[target.ID] = append(n.paths[target.ID], currentPath)
-		return []Path{currentPath}
 	}
 
 	// Search for paths from neighbours
-	for _, neighbour := range n.neighbours {
-		if depth < n.group.maxRecursionDepth {
-			allPaths = append(allPaths, neighbour.pathsTo(target, depth+1, currentPath, allPaths)...)
+	chanNeighbourResults := make(chan []Path)
+	if depth < n.group.maxRecursionDepth {
+		for _, neighbour := range n.neighbours {
+			go neighbour.pathsTo(target, depth+1, currentPath, chanNeighbourResults)
 		}
 	}
 
+	results := []Path{}
+	if debug {
+		for i := 0; i <= depth; i++ {
+			fmt.Printf("\t")
+		}
+		fmt.Printf("[%v -> %v] Waiting to read from %v routines\n", n, target, len(n.neighbours))
+	}
+	for i := 0; i < len(n.neighbours); i++ {
+		if debug {
+			for i := 0; i <= depth; i++ {
+				fmt.Printf("\t")
+			}
+			fmt.Printf("[%v -> %v] Reading results of %v\n", n, target, i)
+		}
+		neighbourPaths := <-chanNeighbourResults
+		results = append(results, neighbourPaths...)
+	}
+	//HACK
+	results = deDuplicatePaths(results)
+	chanResults <- results
 	//	n.paths[target.ID] = append(n.paths[target.ID], allPaths...)
-	// HACK
-	return deDuplicatePaths(allPaths)
 }
 
 func appendNodeIfMissing(nodes []*Node, nodeToAppend *Node) []*Node {
