@@ -116,12 +116,14 @@ func (n *Node) pathsTo(target *Node, depth int, currentPath Path, chanResults ch
 	// Skip if this node has already been visited in the current run
 	if currentPath.Contains(n) {
 		chanResults <- []Path{}
+		return
 	}
 	currentPath = append(currentPath, n)
 
 	if n.Equal(target) {
 		chanResults <- []Path{currentPath}
 		//		n.paths[target.ID] = append(n.paths[target.ID], currentPath)
+		return
 	}
 
 	// Search for paths from neighbours
@@ -153,6 +155,7 @@ func (n *Node) pathsTo(target *Node, depth int, currentPath Path, chanResults ch
 	results = deDuplicatePaths(results)
 	chanResults <- results
 	//	n.paths[target.ID] = append(n.paths[target.ID], allPaths...)
+	return
 }
 
 func appendNodeIfMissing(nodes []*Node, nodeToAppend *Node) []*Node {
