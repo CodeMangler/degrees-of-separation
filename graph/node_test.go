@@ -12,7 +12,7 @@ func TestNodeConstruction(t *testing.T) {
 	assert.Equal(t, node.group, defaultNodeGroup)
 	//	assert.NotNil(t, node.paths)
 
-	var nodeFetcher NodeFetcher = func(n *Node) {}
+	var nodeFetcher NodeFetcher = func(n *Node) error { return nil }
 	node = NewNode("two", nodeFetcher)
 	assert.Equal(t, node.load, nodeFetcher)
 	assert.Equal(t, node.group, defaultNodeGroup)
@@ -226,10 +226,11 @@ func TestNodeLazyLoading(t *testing.T) {
 
 	loaderWasCalled := false
 	a.loaded = false
-	a.load = func(n *Node) {
+	a.load = func(n *Node) error {
 		loaderWasCalled = true
 		n.Connect(b)
 		b.Connect(c)
+		return nil
 	}
 
 	aToC := a.PathsTo(c)

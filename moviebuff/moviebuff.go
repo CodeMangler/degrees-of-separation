@@ -66,8 +66,11 @@ func fetchEntity(id string) (*mbEntity, error) {
 }
 
 // Fetch fetches moviebuff content given an ID/URL, and populates Neighbours of the Node.
-func Fetch(n *graph.Node) {
-	entity, _ := fetchEntity(n.ID)
+func Fetch(n *graph.Node) error {
+	entity, err := fetchEntity(n.ID)
+	if err != nil {
+		return err
+	}
 	var connections []mbConnection
 	if entity.Type == "Person" {
 		connections = entity.Movies
@@ -78,4 +81,5 @@ func Fetch(n *graph.Node) {
 	for _, connection := range connections {
 		n.Connect(graph.NewNode(connection.URL, graph.NodeFetcher(Fetch)))
 	}
+	return nil
 }
