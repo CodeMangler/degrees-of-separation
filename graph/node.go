@@ -3,6 +3,7 @@ package graph
 import (
 	"fmt"
 	"sort"
+	"sync"
 	"time"
 )
 
@@ -15,17 +16,18 @@ const (
 type NodeFetcher func(*Node) error
 
 var defaultNodeFetcher NodeFetcher = func(n *Node) error {
-	n.Data = true
+	n.SetData(true)
 	return nil
 }
 
 // Node represents a graph node.
 type Node struct {
 	ID         string
-	Data       interface{}
+	data       interface{}
 	neighbours []*Node
 	load       NodeFetcher
 	group      *NodeGroup
+	lock       sync.Mutex
 	//	paths      map[string][]Path
 }
 
@@ -87,6 +89,22 @@ func (n *Node) IsNeighbour(other *Node) bool {
 	return false
 }
 
+// SetData sets Node data in a thread-safe manner.
+func (n *Node) SetData(data interface{}) {
+	n.lock.Lock()
+	n.data = data
+	n.lock.Unlock()
+}
+
+// HasData checks for presence of Node data in a thread-safe manner.
+func (n *Node) HasData() bool {
+	result := false
+	n.lock.Lock()
+	result = (n.data != nil)
+	n.lock.Unlock()
+	return result
+}
+
 // PathsTo computes all possible paths from the current node to the target node.
 // It returns an empty slice when no paths are available.
 func (n *Node) PathsTo(target *Node, args ...interface{}) []Path {
@@ -114,7 +132,7 @@ func (n *Node) pathsTo(target *Node, depth int, pathID string, stopAtFirstPath b
 	}
 	// Lazy load Node
 	loadAttempt := 0
-	for n.Data == nil {
+	for !n.HasData() {
 		if debug {
 			tabs(depth)
 			fmt.Printf("Loading %v. Attempt %v\n", n.ID, loadAttempt)
@@ -136,18 +154,25 @@ func (n *Node) pathsTo(target *Node, depth int, pathID string, stopAtFirstPath b
 	}
 
 	// Skip if this node has already been visited in the current run
-	if currentPath.Contains(n) {
+	n.group.lock.Lock()
+	loop := currentPath.Contains(n)
+	n.group.lock.Unlock()
+	if loop {
 		chanResults <- []Path{}
 		return
 	}
+	n.group.lock.Lock()
 	currentPath = append(currentPath, n)
+	n.group.lock.Unlock()
 
 	if n.Equal(target) {
 		if debug {
 			tabs(depth)
 			fmt.Printf("$$$$$$$$$$$$$ [%v] %v -> %v Found: %v\n", pathID, n, target, currentPath)
 		}
+		n.group.lock.Lock()
 		n.group.pathsFound[pathID] = true
+		n.group.lock.Unlock()
 		chanResults <- []Path{currentPath}
 		//		n.paths[target.ID] = append(n.paths[target.ID], currentPath)
 		return

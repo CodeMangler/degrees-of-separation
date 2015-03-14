@@ -2,6 +2,7 @@ package graph
 
 import (
 	"errors"
+	"sync"
 )
 
 var defaultNodeGroup = NewNodeGroup()
@@ -11,6 +12,7 @@ type NodeGroup struct {
 	nodes             map[string]*Node
 	maxRecursionDepth int
 	pathsFound        map[string]bool
+	lock              sync.Mutex
 }
 
 // NewNodeGroup creates a new NodeGroup

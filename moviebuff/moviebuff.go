@@ -70,7 +70,7 @@ func Fetch(n *graph.Node) error {
 		connections = entity.Cast
 	}
 
-	n.Data = entity
+	n.SetData(entity)
 
 	for _, connection := range connections {
 		n.Connect(graph.NewNode(connection.URL, graph.NodeFetcher(Fetch)))
