@@ -11,13 +11,16 @@ const debug = false
 // NodeFetcher is a function that can lazily load Node data.
 type NodeFetcher func(*Node) error
 
-var defaultNodeFetcher NodeFetcher = func(n *Node) error { return nil }
+var defaultNodeFetcher NodeFetcher = func(n *Node) error {
+	n.Data = true
+	return nil
+}
 
 // Node represents a graph node.
 type Node struct {
 	ID         string
+	Data       interface{}
 	neighbours []*Node
-	loaded     bool
 	load       NodeFetcher
 	group      *NodeGroup
 	//	paths      map[string][]Path
@@ -109,15 +112,15 @@ func (n *Node) pathsTo(target *Node, depth int, currentPath Path, chanResults ch
 		}
 		fmt.Printf("pathsTo(%v, %v, %v, >>%v<<)\n", n, target, depth, currentPath)
 	}
-	// Lazy load Node if required
-	for !n.loaded {
+	// Lazy load Node
+	for n.Data == nil {
 		err := n.load(n)
+		// Retry loading node after a pause if there was an error while loading
 		if err != nil {
 			time.Sleep(1 * time.Second)
-		} else {
-			n.loaded = true
 		}
 	}
+
 	// Skip if this node has already been visited in the current run
 	if currentPath.Contains(n) {
 		chanResults <- []Path{}

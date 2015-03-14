@@ -1,6 +1,8 @@
 package graph
 
-import "errors"
+import (
+	"errors"
+)
 
 var defaultNodeGroup = NewNodeGroup()
 

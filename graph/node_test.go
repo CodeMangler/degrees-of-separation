@@ -225,9 +225,10 @@ func TestNodeLazyLoading(t *testing.T) {
 	c := NewNode("C")
 
 	loaderWasCalled := false
-	a.loaded = false
+	a.Data = nil
 	a.load = func(n *Node) error {
 		loaderWasCalled = true
+		n.Data = true
 		n.Connect(b)
 		b.Connect(c)
 		return nil

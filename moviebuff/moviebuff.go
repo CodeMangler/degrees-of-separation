@@ -28,15 +28,9 @@ type mbConnection struct {
 	Role string `json:"role"`
 }
 
-var entities = make(map[string]*mbEntity)
-
 func fetchEntity(id string) (*mbEntity, error) {
 	entityURL := baseURL + "/" + id
 
-	if entity, ok := entities[id]; ok {
-		fmt.Printf("----------->>>>> Found in Cache: %v\n", id)
-		return entity, nil
-	}
 	fmt.Printf("----------- Fetching: %v\n", entityURL)
 	response, errHTTP := httpClient.Get(entityURL)
 	if errHTTP != nil {
@@ -61,7 +55,6 @@ func fetchEntity(id string) (*mbEntity, error) {
 	if errDecode != nil {
 		return nil, errDecode
 	}
-	entities[id] = entity
 	return entity, nil
 }
 
@@ -77,6 +70,8 @@ func Fetch(n *graph.Node) error {
 	} else {
 		connections = entity.Cast
 	}
+
+	n.Data = entity
 
 	for _, connection := range connections {
 		n.Connect(graph.NewNode(connection.URL, graph.NodeFetcher(Fetch)))
