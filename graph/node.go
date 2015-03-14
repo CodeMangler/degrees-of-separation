@@ -110,9 +110,8 @@ func (n *Node) pathsTo(target *Node, depth int, currentPath Path, allPaths []Pat
 	currentPath = append(currentPath, n)
 
 	if n.Equal(target) {
-		results := deDuplicatePaths(append(allPaths, currentPath))
 		//		n.paths[target.ID] = append(n.paths[target.ID], currentPath)
-		return results
+		return []Path{currentPath}
 	}
 
 	// Search for paths from neighbours
