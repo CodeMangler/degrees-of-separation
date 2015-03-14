@@ -105,7 +105,7 @@ func (n *Node) pathsTo(target *Node, depth int, currentPath Path, allPaths []Pat
 	}
 	// Skip if this node has already been visited in the current run
 	if currentPath.Contains(n) {
-		return allPaths
+		return []Path{}
 	}
 	currentPath = append(currentPath, n)
 
