@@ -10,6 +10,7 @@ var defaultNodeGroup = NewNodeGroup()
 type NodeGroup struct {
 	nodes             map[string]*Node
 	maxRecursionDepth int
+	pathsFound        map[string]bool
 }
 
 // NewNodeGroup creates a new NodeGroup
@@ -19,7 +20,9 @@ func NewNodeGroup(args ...interface{}) *NodeGroup {
 	if len(args) > 0 {
 		maxRecursionDepth = args[0].(int)
 	}
-	return &NodeGroup{nodes: make(map[string]*Node), maxRecursionDepth: maxRecursionDepth}
+	return &NodeGroup{nodes: make(map[string]*Node),
+		pathsFound:        make(map[string]bool),
+		maxRecursionDepth: maxRecursionDepth}
 }
 
 // Register registers a Node with the current NodeGroup by it's ID

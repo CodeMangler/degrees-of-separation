@@ -31,7 +31,6 @@ type mbConnection struct {
 func fetchEntity(id string) (*mbEntity, error) {
 	entityURL := baseURL + "/" + id
 
-	fmt.Printf("----------- Fetching: %v\n", entityURL)
 	response, errHTTP := httpClient.Get(entityURL)
 	if errHTTP != nil {
 		return nil, errHTTP

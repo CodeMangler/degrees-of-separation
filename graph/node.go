@@ -6,7 +6,10 @@ import (
 	"time"
 )
 
-const debug = false
+const (
+	debug           = false
+	maxLoadAttempts = 3
+)
 
 // NodeFetcher is a function that can lazily load Node data.
 type NodeFetcher func(*Node) error
@@ -86,37 +89,48 @@ func (n *Node) IsNeighbour(other *Node) bool {
 
 // PathsTo computes all possible paths from the current node to the target node.
 // It returns an empty slice when no paths are available.
-func (n *Node) PathsTo(target *Node) []Path {
-	if debug {
-		fmt.Println()
+func (n *Node) PathsTo(target *Node, args ...interface{}) []Path {
+	stopAtFirstPath := false
+	if len(args) > 0 {
+		stopAtFirstPath = args[0].(bool)
 	}
+
 	chanResults := make(chan []Path)
-	go n.pathsTo(target, 0, Path{}, chanResults)
+	go n.pathsTo(target, 0, Path{n, target}.String(), stopAtFirstPath, Path{}, chanResults)
 	paths := <-chanResults
 	sort.Stable(byPathLength(paths))
 	return paths
 }
 
-func (n *Node) pathsTo(target *Node, depth int, currentPath Path, chanResults chan []Path) {
+func (n *Node) pathsTo(target *Node, depth int, pathID string, stopAtFirstPath bool, currentPath Path, chanResults chan []Path) {
 	if debug {
-		defer func() {
-			for i := 0; i <= depth; i++ {
-				fmt.Printf("\t")
-			}
-			fmt.Printf("Returning from pathsTo(%v, %v, %v, >>%v<<)\n", n, target, depth, currentPath)
-		}()
-	}
-	if debug {
-		for i := 0; i <= depth; i++ {
-			fmt.Printf("\t")
-		}
+		tabs(depth)
 		fmt.Printf("pathsTo(%v, %v, %v, >>%v<<)\n", n, target, depth, currentPath)
 	}
+
+	if stopAtFirstPath && n.group.pathsFound[pathID] {
+		chanResults <- []Path{}
+		return
+	}
 	// Lazy load Node
+	loadAttempt := 0
 	for n.Data == nil {
+		if debug {
+			tabs(depth)
+			fmt.Printf("Loading %v. Attempt %v\n", n.ID, loadAttempt)
+		}
 		err := n.load(n)
 		// Retry loading node after a pause if there was an error while loading
 		if err != nil {
+			if loadAttempt > maxLoadAttempts {
+				if debug {
+					tabs(depth)
+					fmt.Printf(">>>>>>>>>>>>>>>>> Failed to load %v. Bailing out.\n", n.ID)
+				}
+				chanResults <- []Path{}
+				return
+			}
+			loadAttempt++
 			time.Sleep(1 * time.Second)
 		}
 	}
@@ -129,6 +143,11 @@ func (n *Node) pathsTo(target *Node, depth int, currentPath Path, chanResults ch
 	currentPath = append(currentPath, n)
 
 	if n.Equal(target) {
+		if debug {
+			tabs(depth)
+			fmt.Printf("$$$$$$$$$$$$$ [%v] %v -> %v Found: %v\n", pathID, n, target, currentPath)
+		}
+		n.group.pathsFound[pathID] = true
 		chanResults <- []Path{currentPath}
 		//		n.paths[target.ID] = append(n.paths[target.ID], currentPath)
 		return
@@ -138,24 +157,12 @@ func (n *Node) pathsTo(target *Node, depth int, currentPath Path, chanResults ch
 	chanNeighbourResults := make(chan []Path)
 	if depth < n.group.maxRecursionDepth {
 		for _, neighbour := range n.neighbours {
-			go neighbour.pathsTo(target, depth+1, currentPath, chanNeighbourResults)
+			go neighbour.pathsTo(target, depth+1, pathID, stopAtFirstPath, currentPath, chanNeighbourResults)
 		}
 	}
 
 	results := []Path{}
-	if debug {
-		for i := 0; i <= depth; i++ {
-			fmt.Printf("\t")
-		}
-		fmt.Printf("[%v -> %v] Waiting to read from %v routines\n", n, target, len(n.neighbours))
-	}
 	for i := 0; i < len(n.neighbours); i++ {
-		if debug {
-			for i := 0; i <= depth; i++ {
-				fmt.Printf("\t")
-			}
-			fmt.Printf("[%v -> %v] Reading results of %v\n", n, target, i)
-		}
 		neighbourPaths := <-chanNeighbourResults
 		results = append(results, neighbourPaths...)
 	}
@@ -188,4 +195,10 @@ func deDuplicatePaths(paths []Path) []Path {
 		result = append(result, path)
 	}
 	return result
+}
+
+func tabs(count int) {
+	for i := 0; i <= count; i++ {
+		fmt.Printf("\t")
+	}
 }
