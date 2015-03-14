@@ -3,13 +3,16 @@ package moviebuff
 import (
 	"../graph"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 )
 
-const baseURL = "http://data.moviebuff.com/"
-
-var httpClient = &http.Client{}
+var (
+	baseURL    = "http://data.moviebuff.com"
+	httpClient = &http.Client{}
+)
 
 type mbEntity struct {
 	URL    string         `json:"url"`
@@ -22,13 +25,13 @@ type mbEntity struct {
 type mbConnection struct {
 	URL  string `json:"url"`
 	Name string `json:"name"`
-	Role string `json:"type"`
+	Role string `json:"role"`
 }
 
 var entities = make(map[string]*mbEntity)
 
 func fetchEntity(id string) (*mbEntity, error) {
-	entityURL := baseURL + id
+	entityURL := baseURL + "/" + id
 
 	if entity, ok := entities[id]; ok {
 		fmt.Printf("----------->>>>> Found in Cache: %v\n", id)
@@ -38,6 +41,18 @@ func fetchEntity(id string) (*mbEntity, error) {
 	response, errHTTP := httpClient.Get(entityURL)
 	if errHTTP != nil {
 		return nil, errHTTP
+	}
+
+	if response != nil {
+		defer response.Body.Close()
+	}
+
+	if response.StatusCode != 200 {
+		responseBytes, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			return nil, errors.New("unknown error")
+		}
+		return nil, fmt.Errorf("server error: %v: %v", response.StatusCode, string(responseBytes))
 	}
 
 	entity := &mbEntity{}
@@ -61,6 +76,6 @@ func Fetch(n *graph.Node) {
 	}
 
 	for _, connection := range connections {
-		n.Connect(graph.NewNode(connection.URL, Fetch))
+		n.Connect(graph.NewNode(connection.URL, graph.NodeFetcher(Fetch)))
 	}
 }

@@ -11,8 +11,8 @@ func main() {
 	sourceID := os.Args[1]
 	targetID := os.Args[2]
 
-	sourceNode := graph.NewNode(sourceID, moviebuff.Fetch)
-	targetNode := graph.NewNode(targetID, moviebuff.Fetch)
+	sourceNode := graph.NewNode(sourceID, graph.NodeFetcher(moviebuff.Fetch))
+	targetNode := graph.NewNode(targetID, graph.NodeFetcher(moviebuff.Fetch))
 
 	paths := sourceNode.PathsTo(targetNode)
 	if len(paths) == 0 {

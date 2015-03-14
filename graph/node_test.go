@@ -1,6 +1,7 @@
 package graph
 
 import (
+	"fmt"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -199,6 +200,9 @@ func TestMultiplePathComputation(t *testing.T) {
 	f.Connect(g)
 
 	aToF := a.PathsTo(f)
+	for _, path := range aToF {
+		fmt.Println(path)
+	}
 	assert.Equal(t, 10, len(aToF))
 	if len(aToF) == 10 {
 		assert.Equal(t, Path{a, g, f}.String(), aToF[0].String())
