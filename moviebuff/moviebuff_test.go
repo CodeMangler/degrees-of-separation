@@ -1,6 +1,7 @@
 package moviebuff
 
 import (
+	"../graph"
 	"errors"
 	"fmt"
 	"github.com/stretchr/testify/assert"
@@ -37,6 +38,32 @@ func TestFetchEntityReturnsNilOnHTTPError(t *testing.T) {
 	entity, err := fetchEntity("a-non-existent-node")
 	assert.Nil(t, entity)
 	assert.Equal(t, "server error: 500: A server error\n", err.Error())
+}
+
+func TestFetchMapsPersonConnectionsFromMovies(t *testing.T) {
+	json := `{"url":"person-node","type":"Person","name":"An Actor",
+	"movies":[{"name":"Movie One","url":"movie-one","role":"Role One"},{"name":"Movie Two","url":"movie-two","role":"Role Two"}]}`
+	server := serve(json)
+	defer server.Close()
+	baseURL = server.URL
+
+	node := graph.NewNode("person-node")
+	Fetch(node)
+	assert.True(t, node.IsNeighbour(&graph.Node{ID: "movie-one"}))
+	assert.True(t, node.IsNeighbour(&graph.Node{ID: "movie-two"}))
+}
+
+func TestFetchMapsMovieConnectionsFromCast(t *testing.T) {
+	json := `{"url":"movie-node","type":"Movie","name":"A Movie",
+    "cast":[{"url":"cast-one","name":"Cast One","role":"Role Three"},{"url":"cast-two","name":"Cast Two","role":"Role Four"}]}`
+	server := serve(json)
+	defer server.Close()
+	baseURL = server.URL
+
+	node := graph.NewNode("movie-node")
+	Fetch(node)
+	assert.True(t, node.IsNeighbour(&graph.Node{ID: "cast-one"}))
+	assert.True(t, node.IsNeighbour(&graph.Node{ID: "cast-two"}))
 }
 
 func serve(json string, args ...interface{}) *httptest.Server {
